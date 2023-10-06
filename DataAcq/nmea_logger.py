@@ -2,14 +2,14 @@ import serial
 import datetime
 import os
 from datetime import date
-
+from setSysClockFromGGA import main
 #serialPort = serial.Serial(
 #port='/dev/ttyACM0', baudrate=115200, bytesize=8, timeout=2, stopbits=serial.STOPBITS_ONE
 #)
-
-with serial.Serial(
-port='/dev/ttyACM1', baudrate=115200, bytesize=8, timeout=2, stopbits=serial.STOPBITS_ONE
-) as ser:
+serialPort = '/dev/ttyACM1'
+main(serialPort)
+with serial.Serial(port=serialPort, baudrate=115200, bytesize=8,
+                   timeout=2, stopbits=serial.STOPBITS_ONE) as ser:
     currTS2 = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
     today = date.today()
     d4=today.strftime("%m-%d-%Y")
@@ -24,13 +24,12 @@ port='/dev/ttyACM1', baudrate=115200, bytesize=8, timeout=2, stopbits=serial.STO
     line_num=1
     lines_per_file=100
     # read  lines from the serial output
-    while 1:
-        line = ser.readline().decode('ascii', errors='replace')
+    while True:
+        line = ser.readline().decode('ascii', errors='replace')  # first read the line
         line_num = line_num + 1
         datestr=str(datetime.datetime.now())
         file1.write('###' + datestr)
 
-     
         print('###'+datestr+line.strip()) 
         file1.writelines(line)
         if (line_num % lines_per_file) == 0:
