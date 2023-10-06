@@ -2,12 +2,12 @@ import serial
 import datetime
 import os
 from datetime import date
-from setSysClockFromGGA import main
+from setSysClockFromGGA import setClockfromGGA
 #serialPort = serial.Serial(
 #port='/dev/ttyACM0', baudrate=115200, bytesize=8, timeout=2, stopbits=serial.STOPBITS_ONE
 #)
 serialPort = '/dev/ttyACM1'
-main(serialPort)
+setClockfromGGA(serialPort)
 with serial.Serial(port=serialPort, baudrate=115200, bytesize=8,
                    timeout=2, stopbits=serial.STOPBITS_ONE) as ser:
     currTS2 = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
@@ -36,4 +36,4 @@ with serial.Serial(port=serialPort, baudrate=115200, bytesize=8,
             file1.close()
             currTS2 = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
             file_name = "./Data/nmeadata/" + d4 + "/" + currTS2 + ".dat"
-            file1 = open(file_name, 'w')
+            file1 = open(file_name, 'w')main
