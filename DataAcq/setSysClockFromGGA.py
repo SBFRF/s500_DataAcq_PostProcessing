@@ -15,10 +15,13 @@ def setClockfromGGA(serialport, serialPort='/dev/ttyACM1', tryCount=100, sleepTi
 
     Returns:
         None
+
+    Notes:
+        This first requires disabling the service with command
     """
 
     # first turn off the auto time sync function (it has nothing to time sync to)
-    os.system("systemctl stop systemd-timesyncd.service")
+    #os.system("systemctl stop systemd-timesyncd.service")
     with serial.Serial(port=serialport, baudrate=115200, bytesize=8,
                        timeout=2, stopbits=serial.STOPBITS_ONE) as ser:
 
