@@ -40,11 +40,11 @@ def setClockfromGGA(serialport, serialPort='/dev/ttyACM1', tryCount=100, sleepTi
                     print(f'failed {line}')
                     print(f'sleeping for {sleepTimeMin} minutes at {datetime.datetime.now()}')
                     time.sleep(sleepTimeMin*60)
-s
                     continue
 
 
 
 
 if __name__ == "__main__":
+    serialPort='/dev/ttyACM1'
     setClockfromGGA(serialPort)
