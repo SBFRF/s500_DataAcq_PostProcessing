@@ -1,25 +1,35 @@
-"""this script when run will set the system clock from the NMEA GGA data streaming over the identified serial port"""
 import serial
 import datetime
-import os, sys
+import os
+import sys
 from datetime import date
 
 serialPort = '/dev/ttyACM1'
 
 def setClockfromGGA(serialport):
-    with serial.Serial(port=serialport, baudrate=115200, bytesize=8,
-                       timeout=2, stopbits=serial.STOPBITS_ONE) as ser:
-        while True:
-            line = ser.readline().decode('ascii', errors='replace')  # first read the line
-            try:
+    try:
+        with serial.Serial(port=serialport, baudrate=115200, bytesize=8,
+                           timeout=2, stopbits=serial.STOPBITS_ONE) as ser:
+            while True:
+                line = ser.readline().decode('ascii', errors='replace')
                 if line.startswith("$GNGGA"):
-                    # set my pi clock to GGA string (assume correct day)
-                    timestr = datetime.datetime.strptime(line.split(',')[1], '%H%M%S.%f').time().strftime("%H:%M:%S")
-                    os.system(f"timedatectl set-time {timestr}")
-                    print(f'System Time Changed to {timestr}')
-            except:
-                continue
-            sys.exit()
+                    try:
+                        # Extract time from GGA sentence
+                        gga_time_str = line.split(',')[1]
+                        timestr = datetime.datetime.strptime(gga_time_str, '%H%M%S.%f').time().strftime("%H:%M:%S")
+                        
+                        # Update system time
+                        os.system(f"timedatectl set-time {timestr}")
+                        print(f'System Time Changed to {timestr}')
+                        break  # Exit after setting the time
+                    except ValueError as ve:
+                        print(f"Error parsing time from GGA sentence: {ve}")
+                    except Exception as e:
+                        print(f"Unexpected error: {e}")
+    except serial.SerialException as se:
+        print(f"Error opening serial port: {se}")
+    except Exception as e:
+        print(f"Unexpected error: {e}")
 
 if __name__ == "__main__":
     setClockfromGGA(serialPort)
