@@ -1,7 +1,6 @@
 import serial
 import datetime
 import os
-import sys
 import logging
 from datetime import date
 
@@ -26,9 +25,14 @@ def setClockfromGGA(serialport):
                         os.system(f"timedatectl set-time {timestr}")
                         logging.info(f'System Time Changed to {timestr}')
                         break  # Exit after setting the time
-                    except ValueError:
-                        logging.error("Failed to parse time from GGA sentence")
+                    except ValueError as ve:
+                        logging.error(f"Failed to parse time from GGA sentence: {ve}")
+                    except Exception as e:
+                        logging.error(f'Unexpected error when parsing time: {e}')
     except serial.SerialException as e:
         logging.error(f'Serial port error: {e}')
     except Exception as e:
         logging.error(f'Unexpected error: {e}')
+
+if __name__ == "__main__":
+    setClockfromGGA(serialPort)
