@@ -2,7 +2,11 @@ import serial
 import datetime
 import os
 import sys
+import logging
 from datetime import date
+
+# Setup logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 serialPort = '/dev/ttyACM1'
 
@@ -20,16 +24,11 @@ def setClockfromGGA(serialport):
                         
                         # Update system time
                         os.system(f"timedatectl set-time {timestr}")
-                        print(f'System Time Changed to {timestr}')
+                        logging.info(f'System Time Changed to {timestr}')
                         break  # Exit after setting the time
-                    except ValueError as ve:
-                        print(f"Error parsing time from GGA sentence: {ve}")
-                    except Exception as e:
-                        print(f"Unexpected error: {e}")
-    except serial.SerialException as se:
-        print(f"Error opening serial port: {se}")
+                    except ValueError:
+                        logging.error("Failed to parse time from GGA sentence")
+    except serial.SerialException as e:
+        logging.error(f'Serial port error: {e}')
     except Exception as e:
-        print(f"Unexpected error: {e}")
-
-if __name__ == "__main__":
-    setClockfromGGA(serialPort)
+        logging.error(f'Unexpected error: {e}')
