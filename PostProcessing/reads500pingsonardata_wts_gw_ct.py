@@ -2,7 +2,7 @@ import os
 import struct
 from datetime import datetime
 from datetime import timedelta
-
+import tqdm
 import cv2
 from matplotlib import pyplot as plt
 import numpy as np
@@ -12,7 +12,7 @@ import glob
 dirstr = '01-05-2023'  # alos with emlid ppk GPS saved and processed
 dirstr = '20230327'
 dd = glob.glob(os.path.join('SampleData', dirstr,"*.dat"))  # find dat files for sonar
-print(f'found {len(dd)} sonar files for procesing')# loop through files
+print(f'found {len(dd)} sonar files for processing')# loop through files
 # for ii in range(len(dd)):
 #     print(str(ii + 1) + ' ' + dd[ii])
 #
@@ -34,9 +34,11 @@ gain_setting,  decimation, reserved = np.zeros(allocateSize), np.zeros(allocateS
 # these are complicated preallocations
 txt, dt_profile, dt_txt, dt = np.zeros(allocateSize, dtype=object), np.zeros(allocateSize, dtype=object), \
                               np.zeros(allocateSize, dtype=object), np.zeros(allocateSize, dtype=object)
-rangev = np.zeros((allocateSize, 100000))
-profile_data = np.zeros((allocateSize, allocateSize))
-for fi in range(len(dd)):
+rangev = np.zeros((allocateSize, 100000))              # time by depth
+profile_data = np.zeros((allocateSize, allocateSize))  # time by depth
+# read first one ping and pre-allocate arrays
+# take time of application and ping rate to generate time allocation size (max run time of vehicle)
+for fi in tqdm.tqdm(range(len(dd))):
     with open(dd[fi], 'rb') as fid:
         fname = dd[fi]
         print(f'processing {fname}')
@@ -71,7 +73,7 @@ for fi in range(len(dd)):
                         profile_data[ij, jj] = tmp
                 ij += 1
 
-            if packet_id[ii] == 3:
+            if packet_id[ii] == 3:  # just has text string (has detected depth)
                 txt[ij] = fid.read(int(packet_len[ii])).decode('utf-8')
                 dt_txt[ij] = dt
             if packet_id[ii] == 1308:
@@ -99,7 +101,7 @@ for fi in range(len(dd)):
                 decimation[ij] = struct.unpack('B', fid.read(1))[0]
                 reserved[ij] = struct.unpack('B', fid.read(1))[0]
                 num_results[ij] = struct.unpack('H', fid.read(2))[0]
-`               power_results[ij] = struct.unpack('H', fid.read(2))[0]
+                power_results[ij] = struct.unpack('H', fid.read(2))[0]
                 rangev[ij,0:num_results[ij]] = np.linspace(start_mm[ij], start_mm[ij] + length_mm[ij], num_results[ij])
                 dt_profile[ij] = dt[ii] # assign datetime from data written
                 # profile_data_single = [] #= np.empty((num_results[-1], ), dtype=np.uint16)
@@ -120,11 +122,14 @@ for fi in range(len(dd)):
                     #     print(f'didn not read {read}, ii {ii}, ij {ij}')
                 # profile_data.append(profile_data_single)
 print('now clean up data and memory because we couldn''t pre-allocate')
+# clean up array's from over allocation to free up memory and data
+idxShort = (num_results != 0 ).sum() #np.argwhere(num_results != 0).max()  # identify index for end of data to keep
+num_results = np.median(num_results[:idxShort]).astype(int) #num_results[:idxShort][0]
 
-idxShort = np.argwhere(timestamp_msec!=0).max()
+# make data frame for output
+
 smooth_depth_m = smooth_depth_m[:idxShort]
 reserved = reserved[:idxShort]
-num_results = num_results[:idxShort]
 start_mm = start_mm[:idxShort]
 length_mm = length_mm[:idxShort]
 start_ping_hz = start_ping_hz[:idxShort]
@@ -142,15 +147,16 @@ is_db = is_db[:idxShort]
 gain_index = gain_index[:idxShort]
 decimation = decimation[:idxShort]
 dt_profile = dt_profile[:idxShort]
-# num results = 2222
-#rangev,  profile_data (maybe others) need to be handled
-rangev = rangev[:idxShort, :np.median(num_results).astype(int)]
-profile_data = profile_data[:idxShort, :np.median(num_results).astype(int)].T
+
+# rangev,  profile_data need to be handled separately
+rangev = rangev[:idxShort, :num_results]
+profile_data = profile_data[:idxShort, :num_results].T
+
 import h5py
 outfname = 'myfile.h5'
 with h5py.File(outfname, 'w') as hf:
     hf.create_dataset('smooth_depth_m', data=smooth_depth_m)
-    hf.create_dataset('profile_data', data=profile_data)
+    hf.create_dataset('profile_data', data=profile_data.T)
     hf.create_dataset('num_results', data=num_results)
     hf.create_dataset('start_mm', data=start_mm)
     hf.create_dataset('length_mm', data=length_mm)
@@ -168,7 +174,7 @@ with h5py.File(outfname, 'w') as hf:
     hf.create_dataset('range_m', data=rangev/1000)
     
 
-
+print('despike timeseries ')
 
 subset = np.argwhere(dt_profile > datetime(2023,3,27,14)) & (dt_profile < datetime(2023,3,27,15))
 # plotting figures
